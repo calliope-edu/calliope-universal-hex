@@ -262,6 +262,21 @@
         document.body.removeChild(tempLink);
       };
 
+      // Strip MakeCode project metadata that appears after the EoF record.
+      // MakeCode hex files embed an EoF mid-file followed by metadata records;
+      // we only need the firmware portion to create a Universal Hex.
+      let stripMakeCodeMetadata = function (hexStr) {
+        const eofRecord = ':00000001FF';
+        const eofIndex = hexStr.indexOf(eofRecord);
+        if (eofIndex === -1) return hexStr;
+        const afterEof = hexStr.slice(eofIndex + eofRecord.length).trimStart();
+        if (afterEof.length > 0 && afterEof[0] === ':') {
+          // Extra records after the EoF — strip them (MakeCode metadata)
+          return hexStr.slice(0, eofIndex + eofRecord.length) + '\n';
+        }
+        return hexStr;
+      };
+
       // Create the Universal Hex at button press
       let createButton = document.getElementById('button');
       createButton.addEventListener('click', function () {
@@ -274,11 +289,11 @@
         try {
           let universalHex = microbitUh.createUniversalHex([
             {
-              hex: v1HexStr,
+              hex: stripMakeCodeMetadata(v1HexStr),
               boardId: 0x9900,
             },
             {
-              hex: v2HexStr,
+              hex: stripMakeCodeMetadata(v2HexStr),
               boardId: 0x9903,
             },
           ]);
